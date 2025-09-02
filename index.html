@@ -38,7 +38,6 @@
         
         .dashboard.active {
             display: block;
-            animation: fadeIn 1s ease;
             z-index: 2;
         }
         
@@ -53,16 +52,7 @@
             background: rgba(0, 0, 0, 0.7);
             padding: 20px;
             border-radius: 10px;
-        }
-        
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #00bcf2;
-            animation: spin 1s ease-in-out infinite;
-            margin: 0 auto 15px;
+            display: none; /* Ocultar loader por padrão */
         }
         
         .dashboard-info {
@@ -75,16 +65,7 @@
             font-size: 0.8rem;
             color: #fff;
             z-index: 100;
-            transition: opacity 1s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+            transition: opacity 0.3s;
         }
         
         .error-message {
@@ -105,7 +86,6 @@
 <body>
     <div class="dashboard-container">
         <div class="loader" id="loader">
-            <div class="spinner"></div>
             <p>Carregando dashboard...</p>
         </div>
         
@@ -134,7 +114,7 @@
                 "https://app.powerbi.com/view?r=eyJrIjoiM2Y5ODM1MmQtYTI5YS00ZmFhLWJkMzQtMzEzMThlOTE3OTYwIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=9d0e59e193c7637cb996",
                 "https://app.powerbi.com/view?r=eyJrIjoiM2Y5ODM1MmQtYTI5YS00ZmFhLWJkMzQtMzEzMThlOTE3OTYwIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=02c99ef1e2433b87d134",
                 "https://app.powerbi.com/view?r=eyJrIjoiM2Y5ODM1MmQtYTI5YS00ZmFhLWJkMzQtMzEzMThlOTE3OTYwIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9",
-                "https://app.powerbi.com/view?r=eyJrIjoiODliYTkwYzEtMDM3MS00ZGI5LThjZDctNjE5ODE2OGE1NmU0IiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=d8c45c1a5880ac84cb15",
+                "https://app.powerbi.com/view?r=eyJrIjoiM2Y5ODM1MmQtYTI5YS00ZmFhLWJkMzQtMzEzMThlOTE3OTYwIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSectioncde1d1bcda4382a72846",
                 "https://app.powerbi.com/view?r=eyJrIjoiOTZiZTc3MjEtN2MxZC00Yjg1LWI1YWUtNDMxY2MxNTc0YTM1IiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSectionb0b741816a19f1ff5339",
                 "https://app.powerbi.com/view?r=eyJrIjoiOThhNmFhZDQtZTkzMC00YmViLWI2NjUtODU0MDg5NTU4ODUxIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSection1a9e3c76c5d71bfd6425",
                 "https://app.powerbi.com/view?r=eyJrIjoiZjZmZjY3NDMtYjhjZS00NDJmLTlmYjAtMDdkMmIxNWQ0ZmEzIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSection",
@@ -158,25 +138,24 @@
                 "Análise de Falhas",
                 "Análise de Óleo"
             ],
-            rotationInterval: 65000, // Reduzido para 45 segundos
-            loadingTimeout: 55000,   // Timeout para carregamento (35 segundos)
-            retryAttempts: 2,        // Número de tentativas se falhar
-            preloadNext: true        // Pré-carregar próximo dashboard
+            rotationInterval: 65000,
+            loadingTimeout: 55000,
+            retryAttempts: 2,
+            preloadNext: true
         };
         
         // Variáveis de estado
         let currentIndex = 0;
         let rotationInterval;
         let retryCount = 0;
-        let timeoutIds = {}; // Objeto para armazenar timeouts por índice
-        let isSwitching = false; // Flag para evitar sobreposição de transições
-        let dashboardLoadedState = {}; // Rastrear estado de carregamento dos dashboards
+        let timeoutIds = {};
+        let isSwitching = false;
+        let dashboardLoadedState = {};
         
         // Inicializar a rotação
         function initRotation() {
             console.log("Iniciando rotação de dashboards");
             
-            // Verificar se há URLs configuradas
             if (!config.dashboardUrls || config.dashboardUrls.length === 0) {
                 showError("Nenhum dashboard configurado. Por favor, adicione URLs válidas.");
                 return;
@@ -187,15 +166,15 @@
                 dashboardLoadedState[index] = false;
             });
             
-            // Criar iframe apenas para o dashboard atual
-            loadDashboard(currentIndex);
+            // Carregar primeiro dashboard imediatamente
+            loadDashboard(currentIndex, true);
             
             // Iniciar a rotação
             startRotation();
         }
         
         // Carregar um dashboard específico
-        function loadDashboard(index) {
+        function loadDashboard(index, isInitialLoad = false) {
             if (isSwitching) return;
             isSwitching = true;
             
@@ -203,21 +182,22 @@
             
             const dashboardsContainer = document.getElementById('dashboards');
             
-            // Limpar container (exceto se já existir o iframe que queremos)
+            // Verificar se já existe e está carregado
             const existingIframe = document.getElementById(`dashboard-${index}`);
             if (existingIframe && dashboardLoadedState[index]) {
-                // Se já existe e está carregado, apenas ativamos
                 console.log(`Dashboard ${index} já existe e está carregado, ativando...`);
                 switchToDashboard(index);
                 isSwitching = false;
                 return;
             }
             
-            // Mostrar loader
-            document.getElementById('loader').style.display = 'block';
+            // Mostrar loader apenas se não for o carregamento inicial
+            if (!isInitialLoad) {
+                document.getElementById('loader').style.display = 'block';
+            }
             document.getElementById('error-message').style.display = 'none';
             
-            // Remover iframe existente se houver (para recarregar)
+            // Remover iframe existente se houver
             if (existingIframe) {
                 existingIframe.remove();
             }
@@ -264,7 +244,6 @@
                         loadDashboard(index);
                     }, 3000);
                 } else {
-                    // Se todas as tentativas falharem, pular para o próximo dashboard
                     console.log("Pulando para o próximo dashboard");
                     retryCount = 0;
                     showError(`Falha ao carregar dashboard ${index+1}. Pulando para o próximo...`);
@@ -314,7 +293,6 @@
             const nextIframe = document.getElementById(`dashboard-${nextIndex}`);
             
             if (!nextIframe && !dashboardLoadedState[nextIndex]) {
-                // Criar iframe para pré-carregamento
                 const iframe = document.createElement('iframe');
                 iframe.id = `dashboard-${nextIndex}`;
                 iframe.className = 'dashboard';
@@ -394,18 +372,15 @@
             const nextIndex = (currentIndex + 1) % config.dashboardUrls.length;
             console.log(`Próximo dashboard: ${nextIndex}`);
             
-            // Verificar se o próximo dashboard já está carregado
             if (dashboardLoadedState[nextIndex]) {
                 switchToDashboard(nextIndex);
             } else {
-                // Se não estiver carregado, carregá-lo
                 loadDashboard(nextIndex);
             }
         }
         
         // Limpar recursos para evitar vazamento de memória
         function cleanupMemory() {
-            // Manter apenas o dashboard atual e o próximo
             const nextIndex = (currentIndex + 1) % config.dashboardUrls.length;
             
             document.querySelectorAll('.dashboard').forEach((dashboard) => {
@@ -446,7 +421,7 @@
             setTimeout(tryFullscreen, 1000);
         });
         
-        // Recarregar a página se ficar inativa por muito tempo (prevenção de timeout)
+        // Recarregar a página se ficar inativa por muito tempo
         let inactivityTimer;
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
@@ -463,7 +438,6 @@
         // Iniciar timer
         resetInactivityTimer();
         
-        // Adicionar logs para debug
         console.log("Script carregado com sucesso");
         console.log(`Configuração: ${config.dashboardUrls.length} dashboards encontrados`);
     </script>
