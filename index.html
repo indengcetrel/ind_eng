@@ -52,7 +52,6 @@
             background: rgba(0, 0, 0, 0.7);
             padding: 20px;
             border-radius: 10px;
-            display: none; /* Ocultar loader por padrão */
         }
         
         .dashboard-info {
@@ -66,6 +65,22 @@
             color: #fff;
             z-index: 100;
             transition: opacity 0.3s;
+        }
+        
+        .progress-container {
+            width: 200px;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #00bcf2;
+            transition: width 0.3s ease;
         }
         
         .error-message {
@@ -87,6 +102,9 @@
     <div class="dashboard-container">
         <div class="loader" id="loader">
             <p>Carregando dashboard...</p>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
         </div>
         
         <div class="error-message" id="error-message">
@@ -113,8 +131,8 @@
                 "https://app.powerbi.com/view?r=eyJrIjoiM2Y5ODM1MmQtYTI5YS00ZmFhLWJkMzQtMzEzMThlOTE3OTYwIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSectiona09243dd5375f87dcfc6",
                 "https://app.powerbi.com/view?r=eyJrIjoiM2Y5ODM1MmQtYTI5YS00ZmFhLWJkMzQtMzEzMThlOTE3OTYwIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=9d0e59e193c7637cb996",
                 "https://app.powerbi.com/view?r=eyJrIjoiM2Y5ODM1MmQtYTI5YS00ZmFhLWJkMzQtMzEzMThlOTE3OTYwIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=02c99ef1e2433b87d134",
-                "https://app.powerbi.com/view?r=eyJrIjoiM2Y5ODM1MmQtYTI5YS00ZmFhLWJkMzQtMzEzMThlOTE3OTYwIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9",
-                "https://app.powerbi.com/view?r=eyJrIjoiM2Y5ODM1MmQtYTI5YS00ZmFhLWJkMzQtMzEzMThlOTE3OTYwIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSectioncde1d1bcda4382a72846",
+                "https://app.powerbi.com/view?r=eyJrIjoiODliYTkwYzEtMDM3MS00ZGI5LThjZDctNjE5ODE2OGE1NmU0IiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSectioncde1d1bcda4382a72846",
+                "https://app.powerbi.com/view?r=eyJrIjoiODliYTkwYzEtMDM3MS00ZGI5LThjZDctNjE5ODE2OGE1NmU0IiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=d8c45c1a5880ac84cb15",
                 "https://app.powerbi.com/view?r=eyJrIjoiOTZiZTc3MjEtN2MxZC00Yjg1LWI1YWUtNDMxY2MxNTc0YTM1IiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSectionb0b741816a19f1ff5339",
                 "https://app.powerbi.com/view?r=eyJrIjoiOThhNmFhZDQtZTkzMC00YmViLWI2NjUtODU0MDg5NTU4ODUxIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSection1a9e3c76c5d71bfd6425",
                 "https://app.powerbi.com/view?r=eyJrIjoiZjZmZjY3NDMtYjhjZS00NDJmLTlmYjAtMDdkMmIxNWQ0ZmEzIiwidCI6ImE2NjFhZDU2LTQ4YzctNGFmNC04MGY2LTE0YzViMGNmOTk0ZCJ9&pageName=ReportSection",
@@ -138,10 +156,11 @@
                 "Análise de Falhas",
                 "Análise de Óleo"
             ],
-            rotationInterval: 65000,
-            loadingTimeout: 55000,
-            retryAttempts: 2,
-            preloadNext: true
+            rotationInterval: 65000, // Tempo de exibição de cada dashboard
+            initialLoadTimeout: 90000, // Timeout aumentado para o primeiro carregamento
+            loadingTimeout: 55000,   // Timeout para carregamento dos demais
+            retryAttempts: 2,        // Número de tentativas se falhar
+            preloadNext: true        // Pré-carregar próximo dashboard
         };
         
         // Variáveis de estado
@@ -151,6 +170,7 @@
         let timeoutIds = {};
         let isSwitching = false;
         let dashboardLoadedState = {};
+        let isFirstDashboard = true; // Flag para identificar o primeiro dashboard
         
         // Inicializar a rotação
         function initRotation() {
@@ -166,11 +186,21 @@
                 dashboardLoadedState[index] = false;
             });
             
-            // Carregar primeiro dashboard imediatamente
+            // Mostrar loader apenas para o primeiro dashboard
+            document.getElementById('loader').style.display = 'block';
+            updateProgressBar(10);
+            
+            // Carregar primeiro dashboard com timeout estendido
             loadDashboard(currentIndex, true);
             
             // Iniciar a rotação
             startRotation();
+        }
+        
+        // Atualizar barra de progresso
+        function updateProgressBar(percent) {
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = percent + '%';
         }
         
         // Carregar um dashboard específico
@@ -188,12 +218,19 @@
                 console.log(`Dashboard ${index} já existe e está carregado, ativando...`);
                 switchToDashboard(index);
                 isSwitching = false;
+                
+                // Se for o primeiro dashboard, ajustar o timer
+                if (isFirstDashboard) {
+                    isFirstDashboard = false;
+                    resetRotationTimer();
+                }
                 return;
             }
             
             // Mostrar loader apenas se não for o carregamento inicial
             if (!isInitialLoad) {
                 document.getElementById('loader').style.display = 'block';
+                updateProgressBar(10);
             }
             document.getElementById('error-message').style.display = 'none';
             
@@ -210,28 +247,51 @@
             iframe.setAttribute('allowfullscreen', 'true');
             iframe.setAttribute('loading', 'eager');
             
+            // Simular progresso de carregamento
+            const progressInterval = setInterval(() => {
+                const currentProgress = parseInt(document.getElementById('progress-bar').style.width) || 10;
+                if (currentProgress < 90) {
+                    updateProgressBar(currentProgress + 5);
+                }
+            }, 1000);
+            
             // Adicionar evento de load
             iframe.addEventListener('load', () => {
                 console.log(`Dashboard ${index} carregado com sucesso`);
+                clearInterval(progressInterval);
+                updateProgressBar(100);
+                
                 if (timeoutIds[index]) {
                     clearTimeout(timeoutIds[index]);
                     delete timeoutIds[index];
                 }
                 retryCount = 0;
                 dashboardLoadedState[index] = true;
-                switchToDashboard(index);
                 
-                // Pré-carregar próximo dashboard se configurado
-                if (config.preloadNext) {
-                    setTimeout(() => preloadNextDashboard(), 1000);
-                }
-                
-                isSwitching = false;
+                // Pequeno delay para garantir que tudo esteja renderizado
+                setTimeout(() => {
+                    switchToDashboard(index);
+                    
+                    // Se for o primeiro dashboard, ajustar o timer
+                    if (isFirstDashboard) {
+                        isFirstDashboard = false;
+                        resetRotationTimer();
+                    }
+                    
+                    // Pré-carregar próximo dashboard se configurado
+                    if (config.preloadNext) {
+                        setTimeout(() => preloadNextDashboard(), 1000);
+                    }
+                    
+                    isSwitching = false;
+                }, 1000);
             });
             
             // Adicionar evento de error
             iframe.addEventListener('error', () => {
                 console.error(`Erro ao carregar dashboard ${index}`);
+                clearInterval(progressInterval);
+                
                 if (timeoutIds[index]) {
                     clearTimeout(timeoutIds[index]);
                     delete timeoutIds[index];
@@ -254,9 +314,14 @@
                 }
             });
             
+            // Usar timeout maior para o primeiro dashboard
+            const timeoutDuration = isFirstDashboard ? config.initialLoadTimeout : config.loadingTimeout;
+            
             // Adicionar timeout para carregamento
             timeoutIds[index] = setTimeout(() => {
                 console.log(`Timeout ao carregar dashboard ${index}`);
+                clearInterval(progressInterval);
+                
                 if (document.getElementById(`dashboard-${index}`)) {
                     document.getElementById(`dashboard-${index}`).remove();
                 }
@@ -273,10 +338,24 @@
                         nextDashboard();
                     }, 3000);
                 }
-            }, config.loadingTimeout);
+            }, timeoutDuration);
             
             // Adicionar iframe ao container
             dashboardsContainer.appendChild(iframe);
+        }
+        
+        // Reiniciar o timer de rotação para garantir tempo adequado de exibição
+        function resetRotationTimer() {
+            console.log("Reiniciando timer de rotação para garantir tempo de exibição adequado");
+            clearInterval(rotationInterval);
+            
+            // Calcular o tempo restante baseado no tempo de carregamento
+            const timeSinceLoad = Math.min(30000, config.rotationInterval); // Garantir pelo menos 30 segundos
+            rotationInterval = setInterval(() => {
+                if (!isSwitching) {
+                    nextDashboard();
+                }
+            }, config.rotationInterval);
         }
         
         // Mostrar mensagem de erro
